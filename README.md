@@ -6,50 +6,43 @@ A comprehensive Node.js/Express.js REST API for managing quiz participants, user
 
 - **Complete CRUD Operations** for all entities (Users, Participants, Schools, Results, Visitors, Logs)
 - **Role-Based Access Control** (Admin, Moderator, Coordinator, User)
-- **JWT Authentication** with refresh tokens
+- **JWT Authentication** with secure token management
 - **Input Validation** and sanitization
 - **Rate Limiting** and security middleware
-- **Comprehensive Logging** system
+- **Comprehensive Logging** system with Winston
 - **Search and Filtering** capabilities
 - **Bulk Operations** support
 - **Statistics and Analytics** endpoints
 - **Clean Architecture** with services, controllers, and routes separation
 
-## 📋 Table of Contents
+## 📋 Quick Start
 
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [API Documentation](#api-documentation)
-- [Authentication](#authentication)
-- [User Roles](#user-roles)
-- [Database Schema](#database-schema)
-- [Project Structure](#project-structure)
-- [Usage Examples](#usage-examples)
+### Prerequisites
 
-## 🛠 Installation
+- Node.js (v18.0.0 or higher)
+- MongoDB (local or cloud instance)
+- npm or yarn
+
+### Installation
 
 1. **Clone the repository**
-
    ```bash
    git clone <repository-url>
    cd quiz-management-system
    ```
 
 2. **Install dependencies**
-
    ```bash
    npm install
    ```
 
 3. **Set up environment variables**
-
    ```bash
    cp .env.example .env
    # Edit .env with your configuration
    ```
 
 4. **Start the server**
-
    ```bash
    # Development
    npm run dev
@@ -58,7 +51,7 @@ A comprehensive Node.js/Express.js REST API for managing quiz participants, user
    npm start
    ```
 
-## ⚙️ Configuration
+## 🛠 Configuration
 
 Create a `.env` file in the root directory:
 
@@ -81,265 +74,123 @@ ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
 ## 📚 API Documentation
 
 ### Base URL
-
 ```
 http://localhost:3000/api
 ```
 
 ### Health Check
-
 ```http
 GET /api/health
 ```
 
-### Authentication Endpoints
+### Key Endpoints
 
-| Method | Endpoint                | Description       | Access  |
-| ------ | ----------------------- | ----------------- | ------- |
-| POST   | `/auth/register`        | Register new user | Public  |
-| POST   | `/auth/login`           | User login        | Public  |
-| POST   | `/auth/logout`          | User logout       | Private |
-| GET    | `/auth/profile`         | Get user profile  | Private |
-| PUT    | `/auth/profile`         | Update profile    | Private |
-| PUT    | `/auth/change-password` | Change password   | Private |
-| POST   | `/auth/refresh`         | Refresh token     | Private |
-| GET    | `/auth/verify`          | Verify token      | Private |
-| GET    | `/auth/login-history`   | Get login history | Private |
+#### Authentication
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - User login
+- `GET /api/auth/profile` - Get user profile
 
-### User Management Endpoints
+#### Participants
+- `POST /api/participants` - Register participant (Public)
+- `GET /api/participants` - Get all participants (Coordinator+)
+- `PUT /api/participants/:id/verify` - Verify participant
 
-| Method | Endpoint            | Description     | Access     |
-| ------ | ------------------- | --------------- | ---------- |
-| GET    | `/users`            | Get all users   | Moderator+ |
-| GET    | `/users/:id`        | Get user by ID  | Self/Admin |
-| POST   | `/users`            | Create user     | Admin      |
-| PUT    | `/users/:id`        | Update user     | Self/Admin |
-| DELETE | `/users/:id`        | Delete user     | Admin      |
-| PUT    | `/users/:id/verify` | Verify user     | Moderator+ |
-| PUT    | `/users/:id/role`   | Change role     | Admin      |
-| GET    | `/users/stats`      | User statistics | Moderator+ |
-| GET    | `/users/search`     | Search users    | Moderator+ |
+#### Results
+- `GET /api/results/round/:round/leaderboard` - Get leaderboard
+- `POST /api/results` - Create result (Moderator+)
 
-### Participant Endpoints
+For complete API documentation, visit `/api` when the server is running.
 
-| Method | Endpoint                    | Description          | Access       |
-| ------ | --------------------------- | -------------------- | ------------ |
-| POST   | `/participants`             | Register participant | Public       |
-| GET    | `/participants`             | Get all participants | Coordinator+ |
-| GET    | `/participants/:id`         | Get participant      | Coordinator+ |
-| PUT    | `/participants/:id`         | Update participant   | Coordinator+ |
-| DELETE | `/participants/:id`         | Delete participant   | Moderator+   |
-| PUT    | `/participants/:id/verify`  | Verify participant   | Coordinator+ |
-| PUT    | `/participants/bulk-verify` | Bulk verify          | Moderator+   |
-| GET    | `/participants/stats`       | Statistics           | Coordinator+ |
-| GET    | `/participants/search`      | Search participants  | Coordinator+ |
+## 🔐 Authentication & Authorization
 
-## 🔐 Authentication
+### User Roles
 
-The API uses JWT (JSON Web Tokens) for authentication. Include the token in the Authorization header:
+| Role | Permissions |
+|------|-------------|
+| **Admin** | Full system access, user management, role changes |
+| **Moderator** | User verification, participant management, bulk operations |
+| **Coordinator** | Participant management, verification |
+| **User** | Basic access, profile management |
 
+### JWT Authentication
+
+Include the token in the Authorization header:
 ```http
 Authorization: Bearer <your-jwt-token>
 ```
 
-### Registration Example
+## 🗃 Database Models
 
-```javascript
-const response = await fetch("/api/auth/register", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    name: "John Doe",
-    email: "john@example.com",
-    phone: "1234567890",
-    password: "securePassword123",
-    role: "user",
-  }),
-});
-```
+### User
+- Email, phone, name, password (hashed)
+- Role (admin/moderator/coordinator/user)
+- Status (verified/pending/deleted)
 
-### Login Example
+### Participant
+- Name, email, phone, school, class
+- Type (individual/school)
+- Status (verified/pending/deleted)
+- Team ID (optional)
 
-```javascript
-const response = await fetch("/api/auth/login", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    email: "john@example.com",
-    password: "securePassword123",
-  }),
-});
+### Result
+- Round (screeningTest/preliminary/semiFinals/finals)
+- Team ID, position (1st/2nd/3rd/qualified/disqualified)
 
-const { token, user } = await response.json();
-```
-
-## 👥 User Roles
-
-| Role            | Permissions                                                |
-| --------------- | ---------------------------------------------------------- |
-| **Admin**       | Full system access, user management, role changes          |
-| **Moderator**   | User verification, participant management, bulk operations |
-| **Coordinator** | Participant management, verification                       |
-| **User**        | Basic access, profile management                           |
-
-## 🗃 Database Schema
-
-### User Schema
-
-```javascript
-{
-  email: String (required, unique),
-  phone: String (required, 10 digits),
-  name: String (required),
-  password: String (required, hashed),
-  role: String (admin/moderator/coordinator/user),
-  status: String (verified/pending/deleted),
-  createdAt: Date,
-  updatedAt: Date
-}
-```
-
-### Participant Schema
-
-```javascript
-{
-  teamID: String (optional),
-  name: String (required),
-  email: String (required, unique),
-  phone: String (10 digits),
-  dob: Date,
-  class: String,
-  school: String,
-  homeTown: String,
-  fatherName: String,
-  status: String (verified/pending/deleted),
-  type: String (individual/school),
-  registeredAt: Date,
-  verifiedAt: Date,
-  verifiedBy: String
-}
-```
-
-### Log Schema
-
-```javascript
-{
-  loginId: ObjectId (ref: User),
-  email: String,
-  loggedInAt: Date,
-  ip: String,
-  os: String,
-  browser: String,
-  loggedOutAt: Date
-}
-```
+### School
+- Name, moderator email, coordinator email
+- City, status (verified/pending/deleted)
 
 ## 📁 Project Structure
 
 ```
 quiz-management-system/
-├── controllers/           # Request handlers
-│   ├── auth/
-│   │   ├── authController.js
-│   │   └── userController.js
-│   └── quiz/
-│       └── participantController.js
-├── services/             # Business logic
-│   ├── auth/
-│   │   ├── userService.js
-│   │   └── logService.js
-│   ├── quiz/
-│   │   ├── participantService.js
-│   │   ├── schoolService.js
-│   │   └── resultService.js
-│   └── tracking/
-│       └── visitorService.js
-├── routes/               # API routes
-│   ├── auth/
-│   │   ├── authRoutes.js
-│   │   └── userRoutes.js
-│   ├── quiz/
-│   │   └── participantRoutes.js
-│   └── index.js
-├── middleware/           # Custom middleware
-│   └── auth.js
-├── models/              # Database schemas
-│   ├── auth/
-│   │   ├── users.js
-│   │   ├── logs.js
-│   │   └── visitors.js
-│   ├── quiz/
-│   │   ├── participants.js
-│   │   ├── schools.js
-│   │   └── results.js
-│   └── validator.js
-├── db/                  # Database utilities
-│   └── db.js
-├── views/               # Legacy API (backward compatibility)
-└── app.js              # Main application file
+├── src/
+│   ├── config/          # Configuration files
+│   ├── controllers/     # Request handlers
+│   ├── middleware/      # Custom middleware
+│   ├── models/          # Database schemas
+│   ├── routes/          # API routes
+│   ├── services/        # Business logic
+│   ├── utils/           # Utility functions
+│   └── app.js          # Express app setup
+├── tests/              # Test files
+├── docs/               # Documentation
+├── scripts/            # Build/deployment scripts
+├── server.js           # Entry point
+└── package.json
 ```
 
-## 💡 Usage Examples
+## 🧪 Testing
 
-### Create a Participant
+```bash
+# Run all tests
+npm test
 
-```javascript
-const participant = await fetch("/api/participants", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    name: "Jane Smith",
-    email: "jane@school.edu",
-    phone: "9876543210",
-    school: "ABC High School",
-    class: "12th Grade",
-    type: "school",
-  }),
-});
+# Run tests in watch mode
+npm run test:watch
+
+# Generate coverage report
+npm run test:coverage
 ```
 
-### Get Participant Statistics
+## 🚀 Deployment
 
-```javascript
-const stats = await fetch("/api/participants/stats", {
-  headers: {
-    Authorization: `Bearer ${token}`,
-  },
-});
+### Environment Setup
 
-const data = await stats.json();
-// Returns: { total, verified, pending, individual, school }
-```
+1. Set `NODE_ENV=production`
+2. Use strong JWT secret
+3. Configure proper CORS origins
+4. Set up MongoDB connection
+5. Configure logging level
 
-### Search Users
+### Scripts
 
-```javascript
-const users = await fetch("/api/users/search?q=john", {
-  headers: {
-    Authorization: `Bearer ${token}`,
-  },
-});
-```
+```bash
+# Database migration
+node scripts/migrate.js
 
-### Bulk Verify Participants
-
-```javascript
-const result = await fetch("/api/participants/bulk-verify", {
-  method: "PUT",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  },
-  body: JSON.stringify({
-    participantIds: ["id1", "id2", "id3"],
-  }),
-});
+# Seed initial data
+node scripts/seed.js
 ```
 
 ## 🔒 Security Features
@@ -348,64 +199,41 @@ const result = await fetch("/api/participants/bulk-verify", {
 - **CORS** configuration
 - **Rate limiting** (100 requests per 15 minutes)
 - **Input validation** and sanitization
-- **Password hashing** with bcrypt
+- **Password hashing** with bcryptjs
 - **JWT token** authentication
 - **Role-based authorization**
-- **SQL injection** protection via Mongoose
 
-## 🚦 Error Handling
+## 📊 Monitoring & Logging
 
-The API returns consistent error responses:
-
-```javascript
-{
-  "success": false,
-  "message": "Error description",
-  "errors": ["Detailed error messages"] // For validation errors
-}
-```
-
-## 📊 Response Format
-
-All API responses follow this format:
-
-```javascript
-{
-  "success": true,
-  "message": "Operation description",
-  "data": {}, // Response data
-  "count": 10, // For list responses
-  "pagination": {} // For paginated responses
-}
-```
-
-## 🧪 Testing
-
-Run the test suite:
-
-```bash
-npm test
-```
-
-Individual model tests:
-
-```bash
-npm run test-user
-npm run test-participant
-```
-
-## 📝 License
-
-This project is licensed under the MIT License.
+- **Winston** logger with multiple transports
+- **Request logging** with IP, method, and path
+- **Error tracking** with stack traces
+- **Performance monitoring** ready
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 📞 Support
 
-For support and questions, please open an issue in the repository.
+For support and questions:
+- Create an issue in the repository
+- Check the documentation in `/docs`
+- Review the API endpoints at `/api`
+
+## 🔄 Changelog
+
+### v1.0.0
+- Initial release
+- Complete CRUD operations
+- Role-based authentication
+- JWT token management
+- Comprehensive API documentation
